@@ -111,6 +111,17 @@ footer .ini{font:400 64px/1.2 'Pinyon Script',cursive;margin:14px 0 6px;color:#e
 footer .nb{max-width:420px;margin:26px auto 0;font:300 italic 16px/1.7 'Bodoni Moda',serif;color:#d8bfae}
 footer small{display:block;margin-top:26px;font:400 12px Cinzel,serif;letter-spacing:.26em;color:#d8bfae}
 
+#rf{max-width:460px;margin:28px auto 0;text-align:left;display:grid;gap:22px}
+#rf label,#rf legend{display:block;font:500 11px Cinzel,serif;letter-spacing:.18em;text-transform:uppercase;color:#f6d9c8}
+#rf input:not([type=radio]):not([type=checkbox]),#rf select,#rf textarea{width:100%;margin-top:8px;padding:12px 0;background:transparent;border:0;border-bottom:1px solid rgba(246,239,228,.5);border-radius:0;color:#fff;font:300 17px Jost,sans-serif}
+#rf select option{color:#17110e}
+#rf textarea{resize:vertical}
+#rf input:focus,#rf select:focus,#rf textarea:focus{outline:0;border-bottom-color:#fff}
+#rf fieldset{border:0}
+#rf .ch{display:flex;align-items:center;gap:12px;margin-top:12px;font:300 16px Jost,sans-serif;letter-spacing:0;text-transform:none;color:#fff}
+#rf .ch input{width:20px;height:20px;accent-color:#f6efe4;margin:0;flex:none}
+#rf .btn{justify-self:center;margin-top:8px}
+#rm{text-align:center;font:italic 17px 'Bodoni Moda',serif;min-height:1.7em}
 @media(prefers-reduced-motion:reduce){
 *,*:before,*:after{animation:none!important;transition:none!important}
 .rv,.w{opacity:1!important;transform:none!important}
@@ -149,17 +160,20 @@ const N={
   programme:[
     ["Jeudi 7 janvier",[
       ["10h00","Mariage civil, commune d’Ibanda, Bukavu"],
+      ["13h00","Mariage religieux, paroisse Saint Pierre Claver"],
       ["Ensuite","Séance photos"]
     ]],
     ["Vendredi 8 janvier",[
-      ["13h00","Mariage religieux, paroisse Saint Pierre Claver"],
       ["18h00","Réception, Salle La Fontaine"]
     ]]
   ],
   salle:"Salle La Fontaine", adresse:"", ville:"Bukavu",
   tenue:"Le noir est la couleur de notre journée. Nous vous invitons à porter des tenues élégantes et raffinées, avec, si vous le souhaitez, une touche d’or ou de crème.",
   couleurs:[["Noir","#17110e"],["Or","#b08d57"],["Crème","#f6efe4"]],
-  whatsapp:"243991559279",   // lien de votre formulaire
+  moments:["Mariage civil, 7 janvier à 10h","Mariage religieux, 7 janvier à 13h","Réception, 8 janvier à 18h"],
+  // RÉCEPTION DES RÉPONSES : remplissez UNE des deux lignes ci-dessous
+  whatsapp:"",       // votre numéro WhatsApp, format international sans + ni espaces (ex : 243XXXXXXXXX)
+  formEndpoint:"",   // OU l'adresse Formspree (ex : https://formspree.io/f/xxxxxxx) pour recevoir les réponses par e-mail
   limite:"Merci de répondre avant le 20 décembre 2026",
   merci:"Merci de partager avec nous ce bonheur. Votre présence et votre affection sont nos plus beaux cadeaux.",
   nb:"NB : Pour ceux qui souhaitent nous témoigner leur générosité, une contribution financière dans une enveloppe sera appréciée avec gratitude.",
@@ -212,9 +226,21 @@ ${S("tenue",H("Tenue","Le code vestimentaire")+
  `<p class="rv">${N.tenue}</p><div class="sws rv">${N.couleurs.map(c=>`<div class="sw"><i style="background:${c[1]}"></i>${c[0]}</div>`).join("")}</div>`)}
 
 ${S("rsvp",H("Confirmer ma présence","Nous comptons sur vous")+
- `<p class="rv">Un seul formulaire pour nous dire si vous serez des nôtres.</p>
-  <a class="btn rv" target="_blank" rel="noopener" href="${N.rsvpUrl}">Confirmer ma présence</a>
-  <small class="rv">${N.limite}</small>`)}
+ `<p class="rv">Dites-nous si vous serez des nôtres.</p>
+  <small class="rv">${N.limite}</small>
+  <form id="rf" class="rv" novalidate>
+    <label>Nom et prénom<input name="nom" autocomplete="name" required></label>
+    <label>Téléphone (facultatif)<input name="tel" type="tel" autocomplete="tel"></label>
+    <fieldset><legend>Serez-vous présent(e) ?</legend>
+      <label class="ch"><input type="radio" name="presence" value="Oui, avec joie" checked>Oui, avec joie</label>
+      <label class="ch"><input type="radio" name="presence" value="Non, avec regret">Non, avec regret</label></fieldset>
+    <label>Nombre de personnes<select name="nb">${[1,2,3,4,5].map(n=>`<option>${n}</option>`).join("")}</select></label>
+    <fieldset><legend>Je serai présent(e) à</legend>
+      ${N.moments.map(m=>`<label class="ch"><input type="checkbox" name="moment" value="${m}" checked>${m}</label>`).join("")}</fieldset>
+    <label>Un petit mot pour nous (facultatif)<textarea name="msg" rows="3"></textarea></label>
+    <button class="btn" type="submit">Envoyer ma réponse</button>
+    <p id="rm" role="status"></p>
+  </form>`)}
 
 <footer>
   <p class="rv">${N.merci}</p>
@@ -222,6 +248,22 @@ ${S("rsvp",H("Confirmer ma présence","Nous comptons sur vous")+
   <div class="ini rv">${N.p1[0]} &amp; ${N.p2[0]}</div>
   <small class="rv">${N.hashtag}</small>
 </footer>`;
+
+/* Formulaire de confirmation */
+$("#rf").onsubmit=async e=>{
+  e.preventDefault();const f=e.target,d=new FormData(f),m=$("#rm"),nom=(d.get("nom")||"").trim();
+  if(!nom){m.textContent="Merci d’indiquer votre nom.";f.nom.focus();return}
+  const r={nom,telephone:d.get("tel")||"-",presence:d.get("presence"),personnes:d.get("nb"),moments:d.getAll("moment").join(", ")||"-",message:d.get("msg")||"-"};
+  if(N.formEndpoint){
+    try{const x=await fetch(N.formEndpoint,{method:"POST",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(r)});
+      if(x.ok){f.reset();m.textContent="Merci ! Votre réponse nous est bien parvenue.";return}}catch(_){}
+    m.textContent="L’envoi n’a pas abouti. Merci de réessayer.";return}
+  if(N.whatsapp){
+    const t=`Bonjour, c’est ${r.nom}.\nPrésence : ${r.presence}\nPersonnes : ${r.personnes}\nMoments : ${r.moments}\nTéléphone : ${r.telephone}\nMessage : ${r.message}`;
+    open(`https://wa.me/${N.whatsapp}?text=${encodeURIComponent(t)}`,"_blank");
+    m.textContent="Votre message est prêt dans WhatsApp : appuyez sur « Envoyer ».";return}
+  m.textContent="Formulaire à configurer : renseignez whatsapp ou formEndpoint en haut du fichier.";
+};
 
 const reduce=matchMedia("(prefers-reduced-motion:reduce)").matches;
 
